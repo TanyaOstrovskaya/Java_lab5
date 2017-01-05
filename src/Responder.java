@@ -1,7 +1,6 @@
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.util.*;
-import java.util.function.BooleanSupplier;
 
 import static java.util.Arrays.asList;
 
@@ -33,9 +32,9 @@ public class Responder extends Thread {
     }
 
     boolean isInAllArea (double x, double y, double R)   {
-        LinkedList<Figur> figurs = new LinkedList<Figur>
+        LinkedList<Figure> figurs = new LinkedList<Figure>
                 (asList(new FTriangle(R), new FQuaterCircle(R), new FSquare(R)));
-        for (Figur figur : figurs)  {
+        for (Figure figur : figurs)  {
             if (figur.isInArea(x, y))
                 return true;
         }

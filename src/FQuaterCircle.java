@@ -1,4 +1,4 @@
-public class FQuaterCircle implements Figur
+public class FQuaterCircle implements Figure
 {
     private double circleR;
 

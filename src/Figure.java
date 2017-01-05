@@ -1,4 +1,4 @@
-interface Figur
+interface Figure
 {
     public boolean isInArea (Punctum punctum);
     public default boolean isInArea (double x, double y)

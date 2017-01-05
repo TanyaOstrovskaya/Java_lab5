@@ -3,6 +3,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.IOException;
 import java.text.DecimalFormat;
 
 
@@ -14,7 +15,9 @@ public class TaskWindow implements ItemListener {
     JCheckBox[] yJCheckBoxes;
     JLabel currentCoord;
     JSpinner jSpinner;
-    float currRadius = 4;
+    double currRadius = 4;
+
+    Client client = new Client("127.0.0.1", 12345);
 
     private JCheckBox[] fillArrayWithJCheckBoxes() {
         JCheckBox yChBox;
@@ -100,41 +103,42 @@ public class TaskWindow implements ItemListener {
         @Override
         public void stateChanged(ChangeEvent e) {
             currRadius  = Float.parseFloat (((JSpinner) e.getSource()).getValue().toString());
-            graph.changeRadius(currRadius);
+            graph.changeGraphRadius(currRadius);
             repaintGraph();
         }
     }
 
     class MouseAL implements MouseListener {
-
         @Override
         public void mouseClicked(MouseEvent e) {
-            Graph g = (Graph) e.getSource();
-            Punctum punctumToPaint = new Punctum(e.getX(), e.getY());
-            punctumToPaint = g.pixelsToCoord(punctumToPaint);
-            g.punctumList.add(punctumToPaint);
+            try {
+                Graph g = (Graph) e.getSource();
+                Punctum punctumToPaint = new Punctum(e.getX(), e.getY());
+                punctumToPaint = g.pixelsToCoord(punctumToPaint);
+                g.punctumList.add(punctumToPaint);
 
-            g.repaint();
+                g.repaint();
 
-            DecimalFormat decimalFormat = new DecimalFormat("##0.0");
-            currentCoord.setText("x = " + decimalFormat.format(punctumToPaint.getX()) +
-                    ", y = " + decimalFormat.format(punctumToPaint.getY()));
-            if (g.isInAllArea(punctumToPaint.getX(), punctumToPaint.getY())) {
-                g.runAnimation(g);
+                DecimalFormat decimalFormat = new DecimalFormat("##0.0");
+                currentCoord.setText("x = " + decimalFormat.format(punctumToPaint.getX()) +
+                        ", y = " + decimalFormat.format(punctumToPaint.getY()));
+
+                g.punctumList = client.startClient(g.punctumList, currRadius);
+                if (punctumToPaint.isInside)
+                    g.runAnimation(g);
+                g.graphColor = new Color(0, 0, 0);
+                g.repaint();
+
+            } catch (IOException exc) {
+                System.out.println(exc.getMessage());
             }
-            g.graphColor = new Color(0, 0, 0);
-            g.repaint();
         }
-
         @Override
         public void mousePressed(MouseEvent e) {        }
-
         @Override
         public void mouseReleased(MouseEvent e) {        }
-
         @Override
         public void mouseEntered(MouseEvent e) {        }
-
         @Override
         public void mouseExited(MouseEvent e) {        }
     }
@@ -148,8 +152,7 @@ public class TaskWindow implements ItemListener {
         }
     }
 
-
-    public void EventList(JList list)   //обработчик событий для JList
+    public void EventList(JList list)           //обработчик событий для JList
     {
         list.addMouseListener(new MouseAdapter() {
             @Override

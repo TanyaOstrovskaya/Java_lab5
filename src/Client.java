@@ -1,34 +1,50 @@
 import java.io.*;
 import java.net.*;
+import java.util.LinkedList;
 /* Lab 5, variant 50118 */
 
-public class Client extends Thread {
-
+public class Client {
     private DatagramSocket datagramSocket;
-    private int port = 12345;
-    private String host = "127.0.0.1";
+    private int port;
+    private InetAddress address;
     public static boolean serverIsAvailable;
     public static boolean isBusy = false;
-    private TaskWindow window;
 
-    public Client (String host, int port, TaskWindow window) {
-        this.port = port;
-        this.host = host;
-        this.window = window;
-    }
 
-    public void runClient() throws IOException {
-        this.datagramSocket = new DatagramSocket(port);
-        System.out.println("Client: started");
-    }
-
-    public void sendData(byte[] data) throws IOException {
+    public Client(String address, int port) {
         try {
-            DatagramPacket sendPacket = new DatagramPacket(data, data.length, InetAddress.getByName(host), port);
-            datagramSocket.send(sendPacket);
-        } catch (UnknownHostException ex) {
-            System.out.println("Error: unknown host");
+            this.port = port;
+            this.address = InetAddress.getByName(address);
+            this.datagramSocket = new DatagramSocket(port);
+            System.out.println("Client: started");
+        } catch (Exception e) {
+            System.out.println("Unknown host or port");
         }
+    }
+
+    public LinkedList<Punctum> startClient(LinkedList<Punctum> punctums, double R) throws IOException {
+        this.sendData(R);
+        Punctum p = punctums.getFirst();
+        p.isInside = isInside(p.getX(), p.getY());
+        return punctums;
+    }
+
+    private boolean isInside(double x, double y) {
+        boolean result = false;
+        try {
+            this.sendData(x);
+            this.sendData(y);
+            result = this.receiveBoolean();
+        } catch (IOException e) {
+        }
+        return result;
+    }
+
+    <T> void sendData(T data) throws IOException {
+        byte[] sendData = data.toString().getBytes("UTF-8");
+        int port = datagramSocket.getPort();
+        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length);
+        datagramSocket.send(sendPacket);
     }
 
     public byte[] receiveData() throws IOException {
@@ -40,49 +56,16 @@ public class Client extends Thread {
         return buffer;
     }
 
-    public void close () {
+    private boolean receiveBoolean() throws IOException {
+        byte[] isInsideBuffer = receiveData();
+        String isInsideString = new String(isInsideBuffer, "UTF-8");
+        boolean result = Boolean.parseBoolean(isInsideString);
+        return result;
+    }
+
+    public void close() {
         if (datagramSocket != null) {
             datagramSocket.close();
         }
-    }
-
-    @Override
-    public void run () {
-        serverIsAvailable = false;
-        isBusy = true;
-        String test = "1.0 1.0 1.0";
-        while (!serverIsAvailable) {
-            try {
-                this.sendData(test.getBytes());
-                int testAnsw = Integer.parseInt(new String(this.receiveData()).trim());
-            } catch (Exception ex)  {
-                serverIsAvailable = false;
-                continue;
-            }
-            serverIsAvailable = true;
-            if (!window.graph.punctumList.isEmpty())
-                for (int i=0; i<window.graph.punctumList.size(); i++) {
-                    String s = window.graph.punctumList.get(i).getX() + " " + window.graph.punctumList.get(i).getY() +
-                            " " + window.graph.R;
-                    try {
-                        this.sendData(s.getBytes());
-                        window.graph.punctumList.get(i).setHit(Integer.parseInt(new String(Task3.client.receiveData()).trim()));
-                    } catch (Exception e) {
-                    }
-                }
-            if (!Task3.graph..points.isEmpty())
-                for (int i = 0; i < Task3.graph..points.size(); i++) {
-                    String s = Task3.graph..points.get(i).getX() + " " + Task3.graph..points.get(i).getY() + " " + Task3.graph..contourRadius;
-                    try {
-                        Task3.client.sendData(s.getBytes());
-                        Task3.graph.points.get(i).setHit(Integer.parseInt(new String(Task3.client.receiveData()).trim()));
-                    } catch (Exception e) {
-                    }
-                }
-            Task3.graph.repaint();
-        }
-        isBusy = false;
-    }
-
     }
 }

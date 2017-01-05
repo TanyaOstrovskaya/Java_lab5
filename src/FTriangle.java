@@ -1,4 +1,4 @@
-public class FTriangle implements Figur
+public class FTriangle implements Figure
 {
     private double sideLength;
 

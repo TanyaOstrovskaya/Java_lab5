@@ -1,4 +1,4 @@
-public class FSquare implements Figur
+public class FSquare implements Figure
 {
     private double sideLength;
 
