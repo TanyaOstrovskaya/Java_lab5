@@ -3,13 +3,19 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.io.*;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.DoubleSummaryStatistics;
+import java.util.LinkedList;
 
-
-public class TaskWindow implements ItemListener {
-    float currX, currY;
-    static Graph graph;
+public class TaskWindow implements ItemListener, Runnable {
+    private final static int packetSize = 100;
+    double currX, currY;
+    Graph graph;
     JList xList;
     JPanel yPanel;
     JCheckBox[] yJCheckBoxes;
@@ -17,7 +23,32 @@ public class TaskWindow implements ItemListener {
     JSpinner jSpinner;
     double currRadius = 4;
 
-    Client client = new Client("127.0.0.1", 12345);
+    public TaskWindow () {
+        new Thread(this).start();
+    }
+
+    @Override
+    public void run() {
+        try {
+            DatagramSocket socket = new DatagramSocket(12345, InetAddress.getByName("localhost"));
+            System.out.println("Client is ready...");
+            do {
+                DatagramPacket packet = new DatagramPacket(new byte[packetSize], packetSize);
+                socket.receive(packet);
+                final ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(packet.getData());
+                final DataInputStream dataInputStream = new DataInputStream(byteArrayInputStream);
+                final Integer i = dataInputStream.readInt();
+                final Boolean answer = dataInputStream.readBoolean();
+                System.out.println("point №" + i +
+                        ((answer == true) ? "; the point belong to the graph; " : "; the point doesn't belong to the graph; ") +
+                        packet.getAddress() + " " + 12345);
+                graph.colorsList.set(i, Integer.parseInt(answer.toString()));
+                repaintGraph();
+            } while (true);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
 
     private JCheckBox[] fillArrayWithJCheckBoxes() {
         JCheckBox yChBox;
@@ -30,7 +61,7 @@ public class TaskWindow implements ItemListener {
         return resultArray;
     }
 
-    private static void repaintGraph() {
+    private void repaintGraph() {
         graph.repaint();
     }
 
@@ -51,7 +82,7 @@ public class TaskWindow implements ItemListener {
         flowLayout.setAlignment(FlowLayout.CENTER);
 
         // Main graph
-        graph = new Graph(frame.getWidth() / 2, frame.getHeight());
+        graph = new Graph(currRadius, frame.getWidth() / 2, frame.getHeight(), 240);
         graph.addMouseListener(new MouseAL());
         frame.add(graph);
         frame.add(mainPanel);
@@ -111,27 +142,21 @@ public class TaskWindow implements ItemListener {
     class MouseAL implements MouseListener {
         @Override
         public void mouseClicked(MouseEvent e) {
-            try {
-                Graph g = (Graph) e.getSource();
-                Punctum punctumToPaint = new Punctum(e.getX(), e.getY());
-                punctumToPaint = g.pixelsToCoord(punctumToPaint);
-                g.punctumList.add(punctumToPaint);
+            Graph g = (Graph)e.getSource();
+            Punctum punctumToPaint = new Punctum(e.getX(), e.getY());
+            punctumToPaint = g.pixelsToCoord(punctumToPaint);
+            g.punctumList.add(punctumToPaint);
+            g.colorsList.add(-1);
+            g.radiusChanged = false;
 
-                g.repaint();
+            g.repaint();
 
-                DecimalFormat decimalFormat = new DecimalFormat("##0.0");
-                currentCoord.setText("x = " + decimalFormat.format(punctumToPaint.getX()) +
-                        ", y = " + decimalFormat.format(punctumToPaint.getY()));
+            DecimalFormat decimalFormat = new DecimalFormat("##0.0");
+            currentCoord.setText("x = " + decimalFormat.format(punctumToPaint.getX()) +
+                    ", y = " + decimalFormat.format(punctumToPaint.getY()));
 
-                g.punctumList = client.startClient(g.punctumList, currRadius);
-                if (punctumToPaint.isInside)
-                    g.runAnimation(g);
-                g.graphColor = new Color(0, 0, 0);
-                g.repaint();
-
-            } catch (IOException exc) {
-                System.out.println(exc.getMessage());
-            }
+            g.graphColor = new Color(0, 0, 0);
+            g.repaint();
         }
         @Override
         public void mousePressed(MouseEvent e) {        }
@@ -152,16 +177,14 @@ public class TaskWindow implements ItemListener {
         }
     }
 
-    public void EventList(JList list)           //обработчик событий для JList
-    {
+    public void EventList(JList list)  {                //обработчик событий для JList
         list.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent evt) {
                 JList list = (JList)evt.getSource();
-                if (evt.getClickCount() == 1 || evt.getClickCount() == 2)
-                {
+                if (evt.getClickCount() == 1 || evt.getClickCount() == 2) {
                     String value = list.getSelectedValue().toString();
-                    currX = Float.parseFloat(value);
+                    currX = Double.parseDouble(value);
                     currentCoord.setText("x = " + currX + ", y = " + currY);
                 }
             }
@@ -174,15 +197,13 @@ public class TaskWindow implements ItemListener {
         for (int i = 0; i < yJCheckBoxes.length; i++) {
             if (yJCheckBoxes[i] != checkBox)
                 yJCheckBoxes[i].setEnabled(false);
-
         }
-        if (!checkBox.isSelected())
-        {
+        if (!checkBox.isSelected())        {
             for (int i = 0; i < yJCheckBoxes.length; i++) {
                 yJCheckBoxes[i].setEnabled(true);
             }
         }
-        currY = Float.parseFloat(checkBox.getText());
+        currY = Double.parseDouble(checkBox.getText());
         currentCoord.setText("x = " + currX + ", y = " + currY);
     }
 }

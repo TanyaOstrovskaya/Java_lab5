@@ -1,28 +1,25 @@
 import javax.swing.*;
-        import java.awt.*;
-        import java.util.LinkedList;
-        import static java.util.Arrays.*;
+import java.awt.*;
+import java.util.*;
+import java.io.*;
+import java.net.*;
+
+import static java.util.Arrays.*;
         import java.lang.*;
 
 public class Graph extends JPanel implements Runnable
 {
-    GraphCalculation graphCalculator;
-    int graphRadius;                    //graphic radius, default graphRadius = 50
+    private GraphCalculation graphCalculator;
+    public int graphRadius;                    //graphic radius, default graphRadius = 50
     private int step;
     private int height;
     private int width;
     private Graphics2D graphic;
     public Color graphColor = new Color(0,0,0);
-    LinkedList<Punctum> punctumList = new LinkedList<>();
+    public ArrayList<Punctum> punctumList = new ArrayList<>();
+    public ArrayList<Integer> colorsList = new ArrayList<>();
+    public boolean radiusChanged = false;
 
-    public Graph(int w, int h) {
-        this.graphCalculator = new GraphCalculation(4,new LinkedList<Figure>
-                (asList(new FTriangle(4), new FQuaterCircle(4), new FSquare(4))));
-        this.graphRadius = 240;
-        this.width = w;
-        this.height = h;
-        this.step = (int)(graphRadius/graphCalculator.getR());
-    }
 
     public Graph(double R, int w, int h, int graphRadius)  {
         this.graphCalculator = new GraphCalculation(R,new LinkedList<Figure>
@@ -50,18 +47,42 @@ public class Graph extends JPanel implements Runnable
         return new Punctum(punctum.getX()*step + width/2, -punctum.getY()*step + height/2);
     }
 
-    protected void paintPunctum(boolean isInside, Punctum p) {
-        Color pointColor;
-        if (!this.punctumList.isEmpty())  {
-            if (isInside)  {
-                pointColor = new Color(0,255,0);
-            } else
-                pointColor = new Color (255,0,0);
-
-            p = this.coordToPixels(p);              //modify punctum coordinates to pixels
+    private void paintPunctums () {
+        Color pointColor = new Color(100, 100, 100);
+        Punctum currPoint;
+        for (int i = 0; i < punctumList.size(); i++) {
+            currPoint = punctumList.get(i);
+            switch (colorsList.get(i)) {
+                case 0:
+                    pointColor = new Color(255, 0, 0);
+                    break;
+                case 1:
+                    pointColor = new Color(0, 255, 0);
+                    break;
+                case -1:
+                    pointColor = new Color(100, 100, 100);
+                    try {
+                        DatagramSocket socket = new DatagramSocket();
+                        final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                        final DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
+                        dataOutputStream.writeDouble(i);
+                        dataOutputStream.writeDouble(graphCalculator.getR());
+                        dataOutputStream.writeDouble(punctumList.get(i).getX());
+                        dataOutputStream.writeDouble(punctumList.get(i).getY());
+                        dataOutputStream.close();
+                        final byte[] bytes = byteArrayOutputStream.toByteArray();
+                        DatagramPacket packet = new DatagramPacket(bytes, byteArrayOutputStream.size(), InetAddress.getByName("localhost"), 12345);
+                        socket.send(packet);
+                    } catch (Exception e) {
+                        System.out.println(e);
+                    }
+                    break;
+            }
+            currPoint = this.coordToPixels(currPoint);              //modify punctum coordinates to pixels
 
             graphic.setColor(pointColor);
-            graphic.fillOval((int)p.getX() - 2, (int)p.getY() - 2, 4 , 4);
+            graphic.fillOval((int) currPoint.getX() - 2, (int) currPoint.getY() - 2, 4, 4);
+
         }
     }
 
@@ -74,9 +95,8 @@ public class Graph extends JPanel implements Runnable
         this.setBackground(new Color(255, 254, 182));
 
         this.paintGraphBody();
-
-        for (Punctum p : punctumList)
-            this.paintPunctum(p.isInside, p);
+        this.checkRadiusChange();
+        this.paintPunctums();
     }
 
     public void runAnimation(Graph graph) {
@@ -84,6 +104,15 @@ public class Graph extends JPanel implements Runnable
         newThread.start();
         graphColor = new Color(0,0,0);
         repaint();
+    }
+
+    private void checkRadiusChange () {
+        if (radiusChanged) {
+            for (int i = 0; i < punctumList.size(); i++) {
+                colorsList.set(i, -1);
+            }
+            radiusChanged = false;
+        }
     }
 
     private void paintGraphBody () {

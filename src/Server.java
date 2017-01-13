@@ -1,71 +1,129 @@
+import java.net.* ;
 import java.io.*;
+import java.util.LinkedList;
+import static java.util.Arrays.asList;
+
 import java.net.*;
-/* Lab 5, variant */
+import java.io.*;
 
 public class Server extends Thread {
 
-    private GraphCalculation calculator;
-    private DatagramSocket datagramSocket;
-    private int port;
-    private InetAddress address;
+    private DatagramSocket socket;
+    DataInputStream iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
+}
 
-    public Server (int port) throws IOException {
-        datagramSocket = new DatagramSocket(port);
+
+
+
+public class Server extends Thread {
+
+    private Socket client;
+    InputStream in = null;
+    OutputStream out = null;
+    double r = 0;
+    double x = 0;
+    double y = 0;
+
+    public SampleServer(int num, Socket client){
+        System.out.println("New client");
+        this.client = client;
     }
 
     @Override
-    public void run() {
+    public void run(){
+        System.out.println("Starting the server");
         try {
-            this.startServer();
+            in = client.getInputStream();
+            out = client.getOutputStream();
+            DataInputStream inputStream = new DataInputStream(in);
+            DataOutputStream outputStream = new DataOutputStream(out);
+            r = inputStream.readDouble();
+            x = inputStream.readDouble();
+            y = inputStream.readDouble();
+            outputStream.writeBoolean(area(x,y,r));
         } catch (Exception e) {
-            System.out.println("Server is dead. " + e.getMessage());
-            if ((datagramSocket != null) && (!datagramSocket.isClosed())) {
-                this.datagramSocket.close();
+            System.out.println(e);
+        }
+    }
+    public boolean area(double x1, double y1, double R)
+    {
+        if ((x1<=R & x1>=0 & ((y1>=-R & y1<=0)||(Math.pow(x1, 2)+Math.pow(y1, 2)<= Math.pow(R, 2)/4)))|| (x1>=-R & x1<=0 & y1>=-R & y1<=0 & x1>=-R-y1))
+            return true;
+        else return false;
+    }
+
+    public static void main(String args[]){
+        try{
+            int i = 0;
+            ServerSocket serverSocket = serverSocket = new ServerSocket(9010, 0, InetAddress.getByName("localhost"));
+            System.out.println("Server is started");
+            while (true){
+                i++;
+                new SampleServer(i, serverSocket.accept()).run();
             }
+        } catch (IOException e) {
+            System.out.println("Couldn't listen to port 9010");
         }
     }
-
-    private byte[] receiveData () throws IOException  {
-        byte[] receiveData = new byte[512];
-        DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
-        datagramSocket.receive(receivedPacket);
-        this.port = datagramSocket.getPort();
-        this.address = datagramSocket.getInetAddress();
-        return receiveData;
-    }
-
-    <T> void sendData (T data) throws IOException{
-        byte[] sendData = data.toString().getBytes("UTF-8");
-        int port = datagramSocket.getPort();
-        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length);
-        datagramSocket.send(sendPacket);
-    }
-
-    private void startServer() throws IOException {
-        double R = receiveDouble();
-        while (datagramSocket.isConnected()) {
-            double x = receiveDouble();
-            double y = receiveDouble();
-            boolean isInArea = this.isInArea(x,y);
-            sendData(isInArea);
-        }
-    }
-
-    private double receiveDouble() throws  IOException {
-        byte[] radiusBytes = receiveData();
-        String radiusString = new String(radiusBytes, "UTF-8");
-        double result = Double.parseDouble(radiusString);
-        return result;
-    }
-
-    public void close() {
-        if ((this.datagramSocket != null) && (!datagramSocket.isClosed())) {
-            this.datagramSocket.close();
-        }
-    }
-
-    public boolean isInArea (double x, double y) { return calculator.isInArea(x, y); }
-
-    public boolean isInArea (Punctum punctum) { return isInArea(punctum.getX(), punctum.getY()); }
-
 }
+
+
+
+
+
+
+
+//public class Server extends Thread {
+//
+//    private final static int PACKETSIZE = 100 ;
+//
+//    @Override
+//    public void run () {
+//        try {
+//            DatagramSocket socket = new DatagramSocket(12345,
+//                    InetAddress.getByName("localhost"));
+//            System.out.println("\tThe server is ready...\n");
+//            do {
+//                final ByteArrayInputStream byteArrayInputStream;
+//                final DataInputStream dataInputStream;
+//                final ByteArrayOutputStream byteArrayOutputStream;
+//                final DataOutputStream dataOutputStream;
+//                final double i;
+//                final double R;
+//                final double x;
+//                final double y;
+//                boolean answer;
+//                final byte[] bytesArray;
+//
+//                DatagramPacket packet = new DatagramPacket(new byte[PACKETSIZE], PACKETSIZE);
+//                socket.receive(packet);
+//                byteArrayInputStream = new ByteArrayInputStream(packet.getData());
+//                dataInputStream = new DataInputStream(byteArrayInputStream);
+//                i = dataInputStream.readDouble();
+//                R = dataInputStream.readDouble();
+//                x = dataInputStream.readDouble();
+//                y = dataInputStream.readDouble();
+//
+//                GraphCalculation calculator = new GraphCalculation(R, new LinkedList<Figure>
+//                        (asList(new FTriangle(R), new FQuaterCircle(R), new FSquare(R))));
+//                answer = calculator.isInArea(x, y);
+//                System.out.println( "point №" + i + " (x = " + x + "; y = " + y + ") radius = " + R +
+//                        ((answer == true) ? "; the point belong to the graph; " : "; the point doesn't belong to the graph;") + " " +
+//                        packet.getAddress() + " " + packet.getPort() );
+//
+//                byteArrayOutputStream = new ByteArrayOutputStream();
+//                dataOutputStream = new DataOutputStream(byteArrayOutputStream);
+//                dataOutputStream.writeInt((int)Math.round(i));
+//                dataOutputStream.writeBoolean(answer);
+//                dataOutputStream.close();
+//                bytesArray = byteArrayOutputStream.toByteArray();
+//                packet.setData(bytesArray);
+//                packet.setLength(bytesArray.length);
+//                packet.setPort(12345);
+//                socket.send(packet);
+//            } while (true);
+//        } catch (Exception e) {
+//            System.out.println(e.getMessage());
+//        }
+//    }
+//}
