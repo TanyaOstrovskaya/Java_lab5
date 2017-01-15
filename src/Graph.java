@@ -17,17 +17,23 @@ public class Graph extends JPanel implements Runnable
     private Graphics2D graphic;
     public Color graphColor = new Color(0,0,0);
     public ArrayList<Punctum> punctumList = new ArrayList<>();
-    public ArrayList<Integer> colorsList = new ArrayList<>();
-    public boolean radiusChanged = false;
 
+    private boolean isServerAvaliablle;
+    private final static int packetSize = 100;
+    DatagramSocket socket;
 
     public Graph(double R, int w, int h, int graphRadius)  {
-        this.graphCalculator = new GraphCalculation(R,new LinkedList<Figure>
-                (asList(new FTriangle(R), new FQuaterCircle(R), new FSquare(R))));
-        this.graphRadius = graphRadius;
-        this.width = w;
-        this.height = h;
-        this.step = (int)(graphRadius/R);
+        try {
+            this.graphCalculator = new GraphCalculation(R,new LinkedList<Figure>
+                    (asList(new FTriangle(R), new FQuaterCircle(R), new FSquare(R))));
+            this.graphRadius = graphRadius;
+            this.width = w;
+            this.height = h;
+            this.step = (int)(graphRadius/R);
+            this.socket =  new DatagramSocket();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public void changeGraphRadius(double R)  {
@@ -35,6 +41,46 @@ public class Graph extends JPanel implements Runnable
         this.graphCalculator.figures = new LinkedList<Figure>
                 (asList(new FTriangle(R), new FQuaterCircle(R), new FSquare(R)));
         this.step = (int)(graphRadius/R);
+    }
+
+    private boolean doClient (double x, double y, double R) {
+        boolean answer = false;
+        System.out.println("Client is ready...");
+        try {
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
+            dataOutputStream.writeDouble(R);
+            dataOutputStream.writeDouble(x);
+            dataOutputStream.writeDouble(y);
+            byte[] bytes = byteArrayOutputStream.toByteArray();
+            DatagramPacket packet = new DatagramPacket(bytes, byteArrayOutputStream.size(), InetAddress.getByName("localhost"), 12345);
+            socket.send(packet);
+            isServerAvaliablle = true;
+
+        } catch (Exception e) {
+            this.isServerAvaliablle = false;
+            System.out.println(e.getMessage());
+        } finally {
+            if (isServerAvaliablle) {
+                try {
+                    byte[] receiveData = new byte[packetSize];
+                    DatagramPacket receivePacket = new DatagramPacket(receiveData, packetSize );
+                    if (socket.isConnected())
+                        socket.receive(receivePacket);
+                    else
+                        isServerAvaliablle = false;
+                    String receiveString = new String(receivePacket.getData()).trim();
+                    if (receiveString.equals(new String("true")))
+                        answer = true;
+                    else
+                        answer = false;
+
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        }
+        return answer;
     }
 
     public Punctum pixelsToCoord (Punctum punctum) {
@@ -48,41 +94,20 @@ public class Graph extends JPanel implements Runnable
     }
 
     private void paintPunctums () {
-        Color pointColor = new Color(100, 100, 100);
-        Punctum currPoint;
-        for (int i = 0; i < punctumList.size(); i++) {
-            currPoint = punctumList.get(i);
-            switch (colorsList.get(i)) {
-                case 0:
-                    pointColor = new Color(255, 0, 0);
-                    break;
-                case 1:
-                    pointColor = new Color(0, 255, 0);
-                    break;
-                case -1:
-                    pointColor = new Color(100, 100, 100);
-                    try {
-                        DatagramSocket socket = new DatagramSocket();
-                        final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                        final DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
-                        dataOutputStream.writeDouble(i);
-                        dataOutputStream.writeDouble(graphCalculator.getR());
-                        dataOutputStream.writeDouble(punctumList.get(i).getX());
-                        dataOutputStream.writeDouble(punctumList.get(i).getY());
-                        dataOutputStream.close();
-                        final byte[] bytes = byteArrayOutputStream.toByteArray();
-                        DatagramPacket packet = new DatagramPacket(bytes, byteArrayOutputStream.size(), InetAddress.getByName("localhost"), 12345);
-                        socket.send(packet);
-                    } catch (Exception e) {
-                        System.out.println(e);
-                    }
-                    break;
+        if (!punctumList.isEmpty()) {
+            for (Punctum p : punctumList) {
+                Color punctumColor;
+                boolean isInArea = doClient(p.getX(), p.getY(), graphCalculator.getR());
+                if (!isServerAvaliablle)
+                    punctumColor = new Color(100,100,100);
+                else if (isInArea)
+                    punctumColor = new Color(0, 255,0);
+                else
+                    punctumColor = new Color(255, 0, 0);
+                graphic.setColor(punctumColor);
+                p = coordToPixels(p);
+                graphic.fillOval((int) p.getX() - 2, (int) p.getY() - 2, 4, 4);
             }
-            currPoint = this.coordToPixels(currPoint);              //modify punctum coordinates to pixels
-
-            graphic.setColor(pointColor);
-            graphic.fillOval((int) currPoint.getX() - 2, (int) currPoint.getY() - 2, 4, 4);
-
         }
     }
 
@@ -95,7 +120,7 @@ public class Graph extends JPanel implements Runnable
         this.setBackground(new Color(255, 254, 182));
 
         this.paintGraphBody();
-        this.checkRadiusChange();
+
         this.paintPunctums();
     }
 
@@ -104,15 +129,6 @@ public class Graph extends JPanel implements Runnable
         newThread.start();
         graphColor = new Color(0,0,0);
         repaint();
-    }
-
-    private void checkRadiusChange () {
-        if (radiusChanged) {
-            for (int i = 0; i < punctumList.size(); i++) {
-                colorsList.set(i, -1);
-            }
-            radiusChanged = false;
-        }
     }
 
     private void paintGraphBody () {

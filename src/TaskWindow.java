@@ -7,48 +7,28 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.io.*;
+import java.net.UnknownHostException;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.DoubleSummaryStatistics;
-import java.util.LinkedList;
+import java.util.*;
 
-public class TaskWindow implements ItemListener, Runnable {
-    private final static int packetSize = 100;
+public class TaskWindow implements ItemListener {
+
     double currX, currY;
     Graph graph;
     JList xList;
     JPanel yPanel;
     JCheckBox[] yJCheckBoxes;
     JLabel currentCoord;
+    JLabel xyLabel;
+    JLabel coordLabel;
     JSpinner jSpinner;
     double currRadius = 4;
 
-    public TaskWindow () {
-        new Thread(this).start();
-    }
 
-    @Override
-    public void run() {
-        try {
-            DatagramSocket socket = new DatagramSocket(12345, InetAddress.getByName("localhost"));
-            System.out.println("Client is ready...");
-            do {
-                DatagramPacket packet = new DatagramPacket(new byte[packetSize], packetSize);
-                socket.receive(packet);
-                final ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(packet.getData());
-                final DataInputStream dataInputStream = new DataInputStream(byteArrayInputStream);
-                final Integer i = dataInputStream.readInt();
-                final Boolean answer = dataInputStream.readBoolean();
-                System.out.println("point №" + i +
-                        ((answer == true) ? "; the point belong to the graph; " : "; the point doesn't belong to the graph; ") +
-                        packet.getAddress() + " " + 12345);
-                graph.colorsList.set(i, Integer.parseInt(answer.toString()));
-                repaintGraph();
-            } while (true);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
-    }
+    String currCountry;
+    String currLanguage;
+    Locale currLocale;
+    ResourceBundle rb;
 
     private JCheckBox[] fillArrayWithJCheckBoxes() {
         JCheckBox yChBox;
@@ -73,11 +53,13 @@ public class TaskWindow implements ItemListener, Runnable {
         frame.setVisible(true);
         frame.setLayout(new GridLayout(1, 2));
 
-        JPanel mainPanel = new JPanel(new GridLayout(2, 1));
+        JPanel mainPanel = new JPanel(new GridLayout(3, 1));
         JPanel toolPanel1 = new JPanel();
         JPanel toolPanel2 = new JPanel();
+        JPanel toolPanel3 = new JPanel();
         mainPanel.add(toolPanel1);
         mainPanel.add(toolPanel2);
+        mainPanel.add(toolPanel3);
         FlowLayout flowLayout = new FlowLayout();
         flowLayout.setAlignment(FlowLayout.CENTER);
 
@@ -88,7 +70,7 @@ public class TaskWindow implements ItemListener, Runnable {
         frame.add(mainPanel);
 
         // X and Y
-        JLabel xyLabel = new JLabel("Установить точку: ");
+        xyLabel = new JLabel("Установить точку: ");
         toolPanel1.add(xyLabel);
         String[] xArray = {"-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5"};
         xList = new JList(xArray);
@@ -106,7 +88,7 @@ public class TaskWindow implements ItemListener, Runnable {
         toolPanel1.add(yPanel);
 
         // Coordinates
-        JLabel coordLabel = new JLabel("Установленная точка: ");
+        coordLabel = new JLabel("Установленная точка: ");
         toolPanel2.add(coordLabel);
         currentCoord = new JLabel("");
         currentCoord.setText("x = " + currX + ", y = " + currY);
@@ -123,6 +105,14 @@ public class TaskWindow implements ItemListener, Runnable {
         jSpinner = new JSpinner(new SpinnerNumberModel(4,1,50,1));
         jSpinner.addChangeListener(new JSpinnerListener());
         toolPanel2.add(jSpinner);
+
+        // Language Buttons
+        JButton ruBttn = new JButton("RU");
+        ruBttn.addActionListener(new RuButtonListener());
+        toolPanel3.add(ruBttn);
+        JButton svBttn = new JButton("SV");
+        svBttn.addActionListener(new SvButtonListener());
+        toolPanel3.add(svBttn);
 
         frame.pack();
         frame.setSize(1500, 750);
@@ -145,18 +135,15 @@ public class TaskWindow implements ItemListener, Runnable {
             Graph g = (Graph)e.getSource();
             Punctum punctumToPaint = new Punctum(e.getX(), e.getY());
             punctumToPaint = g.pixelsToCoord(punctumToPaint);
-            g.punctumList.add(punctumToPaint);
-            g.colorsList.add(-1);
-            g.radiusChanged = false;
-
-            g.repaint();
+            graph.punctumList.add(punctumToPaint);
+            graph.repaint();
 
             DecimalFormat decimalFormat = new DecimalFormat("##0.0");
             currentCoord.setText("x = " + decimalFormat.format(punctumToPaint.getX()) +
                     ", y = " + decimalFormat.format(punctumToPaint.getY()));
 
-            g.graphColor = new Color(0, 0, 0);
-            g.repaint();
+            graph.graphColor = new Color(0, 0, 0);
+            graph.repaint();
         }
         @Override
         public void mousePressed(MouseEvent e) {        }
@@ -176,6 +163,40 @@ public class TaskWindow implements ItemListener, Runnable {
             repaintGraph();
         }
     }
+
+    private void setLocale () {
+        currLocale = new Locale(currLanguage, currCountry);
+        rb = ResourceBundle.getBundle("text", currLocale);
+        try {
+            byte[] str = rb.getString("str1").getBytes("ISO-8859-1");
+            xyLabel.setText(new String(str));
+
+            str = rb.getString("str2").getBytes("ISO-8859-1");
+            coordLabel.setText(new String(str));
+
+        } catch (Exception e1) {
+            System.out.println(e1.getMessage());
+        }
+    }
+
+    class RuButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            currCountry = "RU";
+            currLanguage = "ru";
+            setLocale();
+        }
+    }
+
+    class SvButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            currCountry = "se";
+            currLanguage = "SV";
+            setLocale();
+        }
+    }
+
 
     public void EventList(JList list)  {                //обработчик событий для JList
         list.addMouseListener(new MouseAdapter() {
