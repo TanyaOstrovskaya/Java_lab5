@@ -5,11 +5,10 @@ import java.io.*;
 import java.net.*;
 
 import static java.util.Arrays.*;
-        import java.lang.*;
+import java.lang.*;
 
-public class Graph extends JPanel implements Runnable
-{
-    private GraphCalculation graphCalculator;
+public class Graph extends JPanel implements Runnable{
+    public GraphCalculation graphCalculator;
     public int graphRadius;                    //graphic radius, default graphRadius = 50
     private int step;
     private int height;
@@ -43,9 +42,9 @@ public class Graph extends JPanel implements Runnable
         this.step = (int)(graphRadius/R);
     }
 
-    private boolean doClient (double x, double y, double R) {
+    public boolean doClient (double x, double y, double R) {
         boolean answer = false;
-        System.out.println("Client is ready...");
+
         try {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
@@ -56,6 +55,7 @@ public class Graph extends JPanel implements Runnable
             DatagramPacket packet = new DatagramPacket(bytes, byteArrayOutputStream.size(), InetAddress.getByName("localhost"), 12345);
             socket.send(packet);
             isServerAvaliablle = true;
+            socket.setSoTimeout(1000);
 
         } catch (Exception e) {
             this.isServerAvaliablle = false;
@@ -63,19 +63,23 @@ public class Graph extends JPanel implements Runnable
         } finally {
             if (isServerAvaliablle) {
                 try {
+                    socket.setSoTimeout(10);
                     byte[] receiveData = new byte[packetSize];
                     DatagramPacket receivePacket = new DatagramPacket(receiveData, packetSize );
-                    if (socket.isConnected())
+                    try {
                         socket.receive(receivePacket);
-                    else
+                        String receiveString = new String(receivePacket.getData()).trim();
+                        if (receiveString.equals(new String("true")))
+                            answer = true;
+                        else
+                            answer = false;
+                    } catch (Exception e) {
                         isServerAvaliablle = false;
-                    String receiveString = new String(receivePacket.getData()).trim();
-                    if (receiveString.equals(new String("true")))
-                        answer = true;
-                    else
-                        answer = false;
+                        System.out.println(e.getMessage());
+                    }
 
                 } catch (Exception e) {
+                    isServerAvaliablle = false;
                     System.out.println(e.getMessage());
                 }
             }

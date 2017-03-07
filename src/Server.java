@@ -3,9 +3,6 @@ import java.io.*;
 import java.util.LinkedList;
 import static java.util.Arrays.asList;
 
-import java.net.*;
-import java.io.*;
-
 public class Server extends Thread {
 
     private final static int PACKET_SIZE = 100;
@@ -49,19 +46,6 @@ public class Server extends Thread {
             byte[] sendData = Boolean.toString(answer).getBytes("UTF-8");
             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, port);
             socket.send(sendPacket);
-
-
-//            byteArrayOutputStream = new ByteArrayOutputStream();
-//            dataOutputStream = new DataOutputStream(byteArrayOutputStream);
-//            dataOutputStream.writeBoolean(answer);
-//          //  dataOutputStream.close();
-//            bytesArray = byteArrayOutputStream.toByteArray();
-//            packet.setData(bytesArray);
-//            packet.setLength(bytesArray.length);
-//            packet.setPort(12345);
-//            socket.send(packet);
-//            dataInputStream.close();
-//            dataOutputStream.close();
 
         } catch (Exception e) {
             System.out.println(e);

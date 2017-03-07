@@ -21,6 +21,7 @@ public class TaskWindow implements ItemListener {
     JLabel currentCoord;
     JLabel xyLabel;
     JLabel coordLabel;
+    JLabel radiusLabel;
     JSpinner jSpinner;
     double currRadius = 4;
 
@@ -100,7 +101,7 @@ public class TaskWindow implements ItemListener {
         toolPanel2.add(check);
 
         // Radius
-        JLabel radiusLabel = new JLabel("Радиус: ");
+        radiusLabel = new JLabel("Радиус: ");
         toolPanel2.add(radiusLabel);
         jSpinner = new JSpinner(new SpinnerNumberModel(4,1,50,1));
         jSpinner.addChangeListener(new JSpinnerListener());
@@ -136,6 +137,8 @@ public class TaskWindow implements ItemListener {
             Punctum punctumToPaint = new Punctum(e.getX(), e.getY());
             punctumToPaint = g.pixelsToCoord(punctumToPaint);
             graph.punctumList.add(punctumToPaint);
+            if (graph.doClient(punctumToPaint.getX(), punctumToPaint.getY(), graph.graphCalculator.getR()))
+                graph.runAnimation(graph);
             graph.repaint();
 
             DecimalFormat decimalFormat = new DecimalFormat("##0.0");
@@ -174,6 +177,9 @@ public class TaskWindow implements ItemListener {
             str = rb.getString("str2").getBytes("ISO-8859-1");
             coordLabel.setText(new String(str));
 
+            str = rb.getString("str3").getBytes("ISO-8859-1");
+            radiusLabel.setText(new String(str));
+
         } catch (Exception e1) {
             System.out.println(e1.getMessage());
         }
@@ -198,7 +204,7 @@ public class TaskWindow implements ItemListener {
     }
 
 
-    public void EventList(JList list)  {                //обработчик событий для JList
+    public void EventList(JList list)  {                                //обработчик событий для JList
         list.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent evt) {
