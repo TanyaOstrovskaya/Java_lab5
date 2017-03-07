@@ -137,8 +137,9 @@ public class TaskWindow implements ItemListener {
             Punctum punctumToPaint = new Punctum(e.getX(), e.getY());
             punctumToPaint = g.pixelsToCoord(punctumToPaint);
             graph.punctumList.add(punctumToPaint);
-            if (graph.doClient(punctumToPaint.getX(), punctumToPaint.getY(), graph.graphCalculator.getR()))
+            if (graph.client.doClient(punctumToPaint.getX(), punctumToPaint.getY(), graph.getRealRadius())) {
                 graph.runAnimation(graph);
+            }
             graph.repaint();
 
             DecimalFormat decimalFormat = new DecimalFormat("##0.0");

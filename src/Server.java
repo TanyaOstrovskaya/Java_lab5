@@ -10,8 +10,6 @@ public class Server extends Thread {
     private DatagramSocket socket;
     ByteArrayInputStream byteArrayInputStream;
     DataInputStream dataInputStream;
-    ByteArrayOutputStream byteArrayOutputStream;
-    DataOutputStream dataOutputStream;
     double R;
     double x;
     double y;
@@ -34,11 +32,9 @@ public class Server extends Thread {
             x = dataInputStream.readDouble();
             y = dataInputStream.readDouble();
 
-            GraphCalculation calculator = new GraphCalculation(R, new LinkedList<Figure>
-                    (asList(new FTriangle(R), new FQuaterCircle(R), new FSquare(R))));
-            answer = calculator.isInArea(x, y);
+            answer = this.isInArea(x,y,R);
             System.out.println("point (x = " + x + "; y = " + y + ") radius = " + R +
-                    ((answer == true) ? "; the point belong to the graph; " : "; the point doesn't belong to the graph;") + " " +
+                    ((answer == true) ? " is " : " is not ") + "in area " +
                     packet.getAddress() + " " + packet.getPort());
 
             InetAddress address = packet.getAddress();
@@ -49,6 +45,16 @@ public class Server extends Thread {
 
         } catch (Exception e) {
             System.out.println(e);
+        }
+    }
+
+    private boolean isInArea (double x, double y, double R) {
+        if  (((x>=0) && (y>=0) && (y < Math.sqrt(R*R - x*x))) ||
+                ((x <= 0) && (y > 0) && (x > -R) && (y < R)) ||
+                ((x > 0) && (y<=0) && (y > x-R))) {
+            return true;
+        } else {
+            return false;
         }
     }
 }
